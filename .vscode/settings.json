@@ -1,0 +1,18 @@
+{
+    "C_Cpp.errorSquiggles": "enabled",
+    "files.associations": {
+        "unroller.h": "c",
+        "metafsm.h": "c",
+        "obfuscatedcallwithpredicate.h": "c",
+        "metastring.h": "c",
+        "indexes.h": "c",
+        "prscfl.h": "c",
+        "log.h": "c",
+        "metarandom.h": "c"
+    },
+    "python.analysis.typeCheckingMode": "off",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.python"
+    },
+    "python.formatting.provider": "none"
+}
