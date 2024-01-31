@@ -121,8 +121,8 @@ def run_docker_command_other(command: Union[str, List[str]], cwd: Optional[str] 
     cwd_str = str(cwd) if cwd is not None else None
     ret = subprocess.run(' '.join(docker_command), check=True, capture_output=True, shell=True,
             timeout=timeout, cwd=cwd_str, **kwargs)
-    print(f"RET {ret.stdout.decode('utf8')}")
-    print(f"RET ERROR {ret.stderr}")
+    #print(f"RET {ret.stdout.decode('utf8')}")
+    #print(f"RET ERROR {ret.stderr}")
     ret = CommandResult(' '.join(docker_command), ret.returncode, None)
         
     # Check whether exceeded timeout limit by inspecting return code.
@@ -139,8 +139,6 @@ def verify_docker_image(verbose: bool = False, print_checked_paths: bool = False
     :param verbose: If ``True``, prints out error message telling the user to rebuild Docker image.
     :param print_checked_paths: If ``True``, prints out paths of all checked files.
     """
-    #return True
-
     output = run_command(
         ["docker", "image", "ls", "gcc-custom", "--format", "{{.CreatedAt}}"], return_output=True).captured_output
     assert output is not None

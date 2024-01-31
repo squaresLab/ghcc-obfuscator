@@ -409,8 +409,8 @@ WORKDIR /
 # Copy `ghcc` files into image, and set PYTHONPATH and PATH.
 COPY ghcc/ $CUSTOM_PATH/ghcc/
 COPY scripts/ $CUSTOM_PATH/scripts/
-#COPY Lib/ /Lib/
+COPY adv-obfuscation/Lib /Lib/
 
 ENV PATH="$CUSTOM_PATH/scripts/mock_path:$PATH"
-#ENV PATH=$PATH:/Lib
+ENV PATH=$PATH:/Lib
 ENV PYTHONPATH="$CUSTOM_PATH/:$PYTHONPATH"

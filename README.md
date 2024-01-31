@@ -1,13 +1,14 @@
 # GitHub Cloner, Obfuscator & Compiler
 
+This project is adapted from [huzecong/ghcc](https://github.com/huzecong/ghcc). In particular, this project does not use a MongoDB database to organize dataset output; the binary files are stored at directory specified by command line argument `--binary-folder`.
 
+It clones, obfuscates, and compiles a list of GitHub repositories to create a dataset of obfuscated C/C++ binaries. Each repository is compiled once without any obfuscation, and 4 additional times with various obfuscations; the resulting binaries from compilation are classified by obfuscation type.
 
-This project serves as the data collection process for training neural decompilers, such as
-[CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE).
+Two open source obfuscation tools are used in this project.
+1. [ADVobfuscator](https://github.com/andrivet/ADVobfuscator), a source-to-source obfuscator used for string obfuscation.
+2. [Obfuscator-LLVM](https://github.com/obfuscator-llvm/obfuscator/wiki/Installation), a compile-time obfuscator with three obfuscation flags. Each flag is used once individually, and once in combination (all three) for a total of 4 compilations.
 
-The code for compilation is adapted from
-[bvasiles/decompilationRenaming](https://github.com/bvasiles/decompilationRenaming). The code for decompilation is
-adapted from [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE). 
+From [huzecong/ghcc](https://github.com/huzecong/ghcc): This project serves as the data collection process for training neural decompilers, such as [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE). The code for compilation is adapted from [bvasiles/decompilationRenaming](https://github.com/bvasiles/decompilationRenaming). The code for decompilation is adapted from [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE). 
 
 
 ## Setup
@@ -19,11 +20,11 @@ adapted from [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE).
    ```
 3. CD to adv-obfuscation directory. Git clone [ADVobfuscator](https://github.com/andrivet/ADVobfuscator) (the latest compatible commit hash is 1852a0e).
 4. Build the Docker image used to apply ADV obfuscation by running:
-  ```bash
-  docker build -t adv-obfuscation .
-  ```
-5.  CD to root directory. Git clone [Obfuscator-LLVM](https://github.com/obfuscator-llvm/obfuscator/wiki/Installation); run only the first line of commands on the wiki page. There should now be a folder at the path "/ghcc-master/obfuscator". The latest version of Obfuscator-LLVM at this point was llvm4.0.
-6. CD to root directory. Build the Docker image used for compiling programs:
+    ```bash
+    docker build -t adv-obfuscation .
+    ```
+5.  CD to root directory. Git clone [Obfuscator-LLVM](https://github.com/obfuscator-llvm/obfuscator/wiki/Installation); run only the first line of commands on the wiki page. There should now be a folder at the path "/ghcc-master/obfuscator". The latest version of Obfuscator-LLVM which is supported is llvm4.0 (latest at the time).
+6. CD to root directory. Build the Docker image used for the cloning and compiling repositories. The estimated time for this Docker image to build from scratch (i.e. with ``--no-cache``) is 2 hours.
    ```bash
    docker build -t gcc-custom .
    ```
@@ -83,10 +84,6 @@ The following arguments are supported:
   ``` 
   This is because intermediate files are created under different permissions, and we need root privileges (sneakily
   obtained via Docker) to purge those files. This is also performed at the beginning of the `main.py` script.
-- If something messed up seriously, drop the database by:
-  ```bash
-  python -m ghcc.database clear
-  ```
 - If the code is modified, remember to rebuild the image since the `batch_make.py` script (executed inside Docker to
   compile Makefiles) depends on the library code. If you don't do so, well, GHCC will remind you and refuse to proceed.
 
@@ -108,110 +105,5 @@ The following arguments are supported:
 - `--n-procs [int]`: Number of worker processes to spawn. Defaults to 0 (single-process execution). 
 
 
-## Advanced Topics
-
-### Heuristics for Compilation
-
-The following procedure happens when compiling a Makefile:
-
-1. **Check if directory is "make"-able:** A directory is marked as "make"-able if it contains (case-insensitively) at
-   least one set of files among the following:
-
-   - *(Make)* `Makefile`
-   - *(automake)* `Makefile.am`
-
-   If the directory is not "make"-able, skip the following steps.
-
-2. **Clean Git repository:**
-
-   ```bash
-   git reset --hard  # reset modified files
-   git clean -xffd  # clean unversioned files
-   # do the same for submodules
-   git submodule foreach --recursive git reset --hard
-   git submodule foreach --recursive git clean -xffd
-   ```
-
-   If any command fails, ignore it and continue executing the rest.
-
-3. **Build:**
-
-   1. If exists a file named `Makefile.am`, run `automake`:
-
-      ```bash
-      autoreconf && automake --add-missing
-      ```
-
-   2. If exists a file named `configure`, run the configuration script:
-
-      ```bash
-      chmod +x ./configure && ./configure --disable-werror
-      ```
-
-      The `--disable-werror` prevents warnings being treated as errors in cases where `-Werror` is specified.
-      
-      If command fails within 2 seconds, try again without `--disable-werror`.
-
-   3. Run `make`:
-
-      ```bash
-      make --always-make --keep-going -j1
-      ```
-      
-      The `--always-make` flag rebuilds all dependent targets even if they exist. The `--keep-going` flag allows Make to
-      continue for targets if errors occur in non-dependent targets.
-
-      If command fails within 2 seconds and the output contains `"Missing separator"`, try again with `bmake`
-      *(BSD Make)*.
-
-      **Note:** We override certain program with our "wrapped" versions by modifying the `PATH` variable. The list of
-      wrapped programs are:
-
-      - **GCC:** (`gcc`, `cc`, `clang`) Swallows unnecessary and/or error-prone flags (`-Werror`, `-march`,
-        `-mlittle-endian`), records libraries used (`-l`), overrides the optimization level (`-O0`), adds override flags
-        specified in the arguments, and calls the real GCC. If the real GCC fails, writes the libraries to a predefined
-        path.
-      - **`sudo`:** Does not prompt for the password, but instead just tries to execute the command without privileges.
-      - **`pkg-config`:** Records libraries used, and calls the real `pkg-config`. If it fails (meaning packages cannot
-        be resolved), write the libraries to a predefined path.
-
-### Collecting and Installing Libraries
-
-Most repositories require linking to external libraries. To collect libraries that are linked to in Makefiles, run the
-script with the flag `--record-libraries path/to/library_log.txt`. Only libraries in commands that failed to execute
-(GCC return code is non-zero) are recorded in the log file.
-
-After gathering the library log, run `install_libraries.py path/to/library_log.txt` to resolve libraries to package
-names (based on `apt-cache`). This step requires actually installing packages, so it's recommended to run it in a Docker
-environment:
-```bash
-docker run --rm \
-    -v /absolute/path/to/directory/:/usr/src/ \
-    gcc-custom \
-    "install_libraries.py /usr/src/library_log.txt"
-```
-This gives a list of packages to install. Add the list of packages to `Dockerfile` (the command that begins with
-`RUN apt-get install -y --no-install-recommends`) and rebuild the image to apply changes.
-
-### Notes on Docker Safety
-
-Compiling random code from GitHub is basically equivalent to running `curl | bash`, and doing so in Docker would be like
-`curl | sudo bash` as Docker (by default) doesn't protect you against kernel panics and fork bombs. The following notes
-describe what is done to (partly) ensure safety of the host machine when compiling code.
-
-1. Never run Docker as root. This means two things: 1) don't use `sudo docker run ...`, and 2) don't execute commands in
-   Docker as the root user (default). The first goal can be achieved by create a `docker` user group, and the second
-   can be achieved using a special entry-point: create a non-privileged user and use `gosu` to switch to that user and
-   run commands.
-
-   **Caveats:** When creating the non-privileged user, assign the same UID (user ID) or GID (group ID) as the host user,
-   so files created inside the container can be accessed/modified by the host user.
-
-2. Limit the number of processes. This is to prevent things like fork bombs or badly written recursive Makefiles from
-   taking up the kernel memory. A simple solution is to use `ulimit -u <nprocs>` to set the maximum allowed number of
-   processes, but such limits are on a per-user basis instead of a per-container or per-process-tree basis.
-
-   What we can do is: for each container we spawn, create a user that has the same GID as the host user, but with a
-   distinct UID, and call `ulimit` for that user. This serves as a workaround for per-container limits.
-   
-   Don't forget to `chmod g+w` for files that need to be accessed from host.
+## Other
+For information on compilation heuristics, docker safety, and installing additional libraries for use in compilation, see [huzecong/ghcc](https://github.com/huzecong/ghcc).

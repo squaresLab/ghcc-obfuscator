@@ -20,7 +20,6 @@ from mypy_extensions import TypedDict
 import argparse
 
 import ghcc
-from ghcc.database import RepoDB
 from ghcc.repo import CloneErrorType
 from ghcc.repo import clean
 
@@ -28,8 +27,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-list-file", type=str)
     parser.add_argument("--clone-folder", type=str, default="repos/") # where cloned repositories are stored (temporarily)
-    parser.add_argument("--binary-folder", type=str, default="dataset/binaries/") # where compiled binaries are stored
-    parser.add_argument("--archive-folder", type=str, default="dataset/archives/") # where archived repositories are stored
+    parser.add_argument("--binary-folder", type=str, default="binaries/") # where compiled binaries are stored
+    parser.add_argument("--archive-folder", type=str, default="archives/") # where archived repositories are stored
 
     parser.add_argument("--n-procs", type=int, default=70) # 0 for single-threaded execution
     parser.add_argument("--log-file", type=str, default="log.txt")
@@ -83,7 +82,7 @@ class PipelineResult(NamedTuple):
     repo_info: RepoInfo
     clone_success: Optional[bool] = None
     repo_size: Optional[int] = None
-    makefiles: Optional[List[RepoDB.MakefileEntry]] = None
+    makefiles: Optional[List] = None
     libraries: Optional[List[str]] = None
     meta_info: Optional[PipelineMetaInfo] = None
 
@@ -161,7 +160,7 @@ def clone_and_compile(repo_info: RepoInfo, clone_folder: str, binary_folder: str
     :param gcc_override_flags: If not ``None``, these flags will be appended to each invocation of GCC.
     :param random_optimization: If ``True``, add a random optimization to the list of GCC flags (default is true)
 
-    :return: An entry to insert into the DB, or `None` if no operations are required.
+    :return: PipelineResult object, or `None` if no operations are required.
     """
     repo_full_name = f"{repo_info.repo_owner}/{repo_info.repo_name}"
     print(f"Cloning/compiling: {repo_full_name}") # print statement to organize compiler output
@@ -248,7 +247,7 @@ def clone_and_compile(repo_info: RepoInfo, clone_folder: str, binary_folder: str
 
     # apply TIGRESS (runs completely in a docker container, merged+obfuscated+compiled)
     # repo_info.obfuscation = "tigress"
-    # subprocess.run(["docker", "run", "--rm", "-v", f"{abs_repo_path}:/repos", "tigress-obfuscation", "--repo-path", "/repos"])
+    # subprocess.run(["docker", "run", "--rm", "-v", f"{abs_repo_path}:/`repos`", "tigress-obfuscation", "--repo-path", "/repos"])
     # repo_info.optimization = "O1"
     # if os.path.exists(f"{abs_repo_path}/with_debug.out"):
     #    repo_info.num_binaries = 1
@@ -447,6 +446,9 @@ def main() -> None:
         flutes.log(f"Removing contents of clone folder '{args.clone_folder}'...", "warning", force_console=True)
         ghcc.utils.run_docker_command(["rm", "-rf", "/usr/src/*"], user=0,
                                       directory_mapping={args.clone_folder: "/usr/src"})
+    else:
+        flutes.log(f"Creating clone folder '{args.clone_folder}'.", "warning", force_console=True)
+        subprocess.run(["mkdir", args.clone_folder])
 
     # set random seed for random_optimization flags
     random.seed(42)

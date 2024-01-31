@@ -142,6 +142,11 @@ adv-obfuscation/Lib
 # dataset symlink
 dataset
 
-# deniz_scripts
-deniz_scripts
+# files/directories produced by running main.py
+repos
+binaries
+archives
 log.txt
+meta_data.json
+
+deniz_scripts

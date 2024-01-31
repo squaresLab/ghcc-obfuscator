@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-print("IN batch_make.py **********")
+#print("IN batch_make.py **********")
 
 import functools
 import multiprocessing as mp
@@ -71,7 +71,7 @@ def worker(q: mp.Queue):
         q.put(makefile)
 
 
-def read_queue(makefiles: List[ghcc.RepoDB.MakefileEntry], q: 'mp.Queue[ghcc.RepoDB.MakefileEntry]'):
+def read_queue(makefiles: List, q: 'mp.Queue'):
     try:
         while True:
             makefiles.append(q.get_nowait())
@@ -90,7 +90,7 @@ def main():
         process.start()
         start_time = time.time()
 
-        makefiles: List[ghcc.RepoDB.MakefileEntry] = []
+        makefiles: List = []
         while process.is_alive():
             time.sleep(2)  # no rush
             cur_time = time.time()

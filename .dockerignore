@@ -1,7 +1,5 @@
-*/
 !ghcc/
 !scripts/
 !*.py
 !requirements.txt
-!Lib/
 !obfuscator

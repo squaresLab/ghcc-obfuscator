@@ -9,7 +9,6 @@ from typing import Callable, Dict, Iterator, List, NamedTuple, Optional
 
 from flutes.run import run_command
 
-from .database import RepoDB
 from .repo import clean
 from .utils.docker import run_docker_command, run_docker_command_other
 
@@ -154,22 +153,22 @@ def _make_skeleton(directory: str, timeout: Optional[float] = None,
 def _unsafe_make(directory: str, timeout: Optional[float] = None, env: Optional[Dict[str, str]] = None,
                  verbose: bool = False) -> None:
     env = {"PATH": f"{MOCK_PATH}:{os.environ['PATH']}", **(env or {})}
-    print("IN _unsafe_make")
+    #print("IN _unsafe_make")
 
     # Try GNU Automake first. Note that errors are ignored because it's possible that the original files still work.
     if contains_files(directory, ["configure.ac", "configure.in"]):
         start_time = time.time()
         if os.path.isfile(os.path.join(directory, "autogen.sh")):
             # Some projects with non-trivial build instructions provide an "autogen.sh" script.
-            print("before run command for gnu autogen")
+            #print("before run command for gnu autogen")
             run_command(["chmod", "+x", "./autogen.sh"], env=env, cwd=directory, verbose=verbose)
             run_command(["./autogen.sh"], env=env, cwd=directory, timeout=timeout, verbose=verbose, ignore_errors=True)
-            print("after run command for gnu autogen")
+            #print("after run command for gnu autogen")
         else:
-            print("before run command for else gnu autogen")
+            #print("before run command for else gnu autogen")
             run_command(["autoreconf", "--force", "--install"],
                         env=env, cwd=directory, timeout=timeout, ignore_errors=True, verbose=verbose)
-            print("after run command for else gnu autogen")
+            #print("after run command for else gnu autogen")
         end_time = time.time()
         if timeout is not None:
             timeout = max(1.0, timeout - int(end_time - start_time))
@@ -177,17 +176,17 @@ def _unsafe_make(directory: str, timeout: Optional[float] = None, env: Optional[
     # Try running `./configure` if it exists.
     if os.path.isfile(os.path.join(directory, "configure")):
         start_time = time.time()
-        print("before run command for gnu configure")
+        #print("before run command for gnu configure")
         run_command(["chmod", "+x", "./configure"], env=env, cwd=directory, verbose=verbose)
         ret = run_command(["./configure", "--disable-werror"], env=env, cwd=directory, timeout=timeout,
                           verbose=verbose, ignore_errors=True)
-        print("after run command for gnu configure")
+        #print("after run command for gnu configure")
         end_time = time.time()
         if ret.return_code != 0 and end_time - start_time <= 2:
             # The configure file might not support `--disable-werror` and died instantly. Try again without the flag.
-            print("before run command for gnu configure")
+            #print("before run command for gnu configure")
             run_command(["./configure"], env=env, cwd=directory, timeout=timeout, verbose=verbose)
-            print("after run command for gnu configure")
+            #print("after run command for gnu configure")
             end_time = time.time()
         if timeout is not None:
             timeout = max(1.0, timeout - int(end_time - start_time))
@@ -195,21 +194,21 @@ def _unsafe_make(directory: str, timeout: Optional[float] = None, env: Optional[
     # Make while ignoring errors.
     # `-B/--always-make` could give strange errors for certain Makefiles, e.g. ones containing "%:"
     try:
-        print("before run command make")
-        print(f"directory: {directory}")
+        #print("before run command make")
+        #print(f"directory: {directory}")
         run_command(["make", "--keep-going", "-j1"], env=env, cwd=directory, timeout=timeout, verbose=verbose)
         #subprocess.run(["make", "--keep-going", "-j1"], env=env, cwd=directory, timeout=timeout)
-        print("after run command make")
+        #print("after run command make")
     except subprocess.CalledProcessError as err:
         expected_msg = b"missing separator"
         if not (err.output is not None and expected_msg in err.output):
-            print(err.output)
+            #print(err.output)
             raise err
         else:
             # Try again using BSD Make instead of GNU Make. Note BSD Make does not have a flag equivalent to
             # `-B/--always-make`.
-            print("else bmake")
-            print(err.output)
+            #print("else bmake")
+            #print(err.output)
             run_command(["bmake", "-k", "-j1"], env=env, cwd=directory, timeout=timeout, verbose=verbose)
 
 
@@ -235,7 +234,7 @@ def unsafe_make(directory: str, timeout: Optional[float] = None, env: Optional[D
 
 def _docker_make(directory: str, timeout: Optional[float] = None, env: Optional[Dict[str, str]] = None,
                  verbose: bool = False) -> None:
-    print("_docker_make ********************************")
+    #print("_docker_make ********************************")
     if os.path.isfile(os.path.join(directory, "configure")):
         # Try running `./configure` if it exists.
         # run_docker_command("chmod +x configure && ./configure && make --keep-going -j1",
@@ -275,7 +274,7 @@ def docker_make(directory: str, timeout: Optional[float] = None, env: Optional[D
 
         - If compilation failed, the fields ``error_type`` and ``captured_output`` are also not ``None``.
     """
-    print("docker_make ***************")
+    #print("docker_make ***************")
     return _make_skeleton(directory, timeout, env, verbose, make_fn=_docker_make)
 
 
@@ -296,7 +295,7 @@ def compile_and_move(repo_binary_dir: str, repo_path: str, makefile_dirs: List[s
                      compile_timeout: Optional[float] = None, record_libraries: bool = False,
                      gcc_override_flags: Optional[str] = None,
                      compile_fn=docker_make, hash_fn: Callable[[str, str], str] = _hash_file_sha256) \
-        -> Iterator[RepoDB.MakefileEntry]:
+        -> Iterator:
     r"""Compile all Makefiles as provided, and move generated binaries to the binary directory.
 
     :param repo_binary_dir: Path to the directory where generated binaries for the repository will be stored.
@@ -316,7 +315,7 @@ def compile_and_move(repo_binary_dir: str, repo_path: str, makefile_dirs: List[s
         ``file`` is the path of the binary, relative to ``directory``.
     :return: A list of Makefile compilation results.
     """
-    print("compile_and_move **************")
+    #print("compile_and_move **************")
     env = {}
     if record_libraries:
         env["MOCK_GCC_LIBRARY_LOG"] = os.path.join(repo_binary_dir, "libraries.txt")
@@ -356,7 +355,7 @@ def docker_batch_compile(repo_binary_dir: str, repo_path: str, compiler: str,
                          gcc_override_flags: Optional[str] = None,
                          use_makefile_info_pkl: bool = False, verbose: bool = False,
                          user_id: Optional[int] = None, directory_mapping: Optional[Dict[str, str]] = None,
-                         exception_log_fn=None) -> List[RepoDB.MakefileEntry]:
+                         exception_log_fn=None) -> List:
     r"""Run batch compilation in Docker.
 
     :param repo_binary_dir: Path to store collected binaries.
@@ -412,7 +411,7 @@ def docker_batch_compile(repo_binary_dir: str, repo_path: str, compiler: str,
             raise e
 
     log_path = os.path.join(repo_binary_dir, "log.pkl")
-    makefiles: List[RepoDB.MakefileEntry] = []
+    makefiles = []
     if os.path.exists(log_path):
         try:
             with open(log_path, "rb") as f:
