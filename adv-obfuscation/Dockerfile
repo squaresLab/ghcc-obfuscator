@@ -376,7 +376,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 # Install packages for compilation & ease-of-use.
 
 # copy library of headers over, and python script
-COPY ./Lib /Lib
+COPY ./ADVobfuscator/Lib /Lib
 COPY ./adv_string_obfuscation.py ./adv_string_obfuscation.py
 COPY ./headers.c /headers.c
 
