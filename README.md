@@ -8,7 +8,7 @@ Two open source obfuscation tools are used in this project.
 1. [ADVobfuscator](https://github.com/andrivet/ADVobfuscator), a source-to-source obfuscator used for string obfuscation.
 2. [Obfuscator-LLVM](https://github.com/obfuscator-llvm/obfuscator/wiki/Installation), a compile-time obfuscator with three obfuscation flags. Each flag is used once individually, and once in combination (all three) for a total of 4 compilations.
 
-From [huzecong/ghcc](https://github.com/huzecong/ghcc): This project serves as the data collection process for training neural decompilers, such as [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE). The code for compilation is adapted from [bvasiles/decompilationRenaming](https://github.com/bvasiles/decompilationRenaming). The code for decompilation is adapted from [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE). 
+From [huzecong/ghcc](https://github.com/huzecong/ghcc): This project serves as the data collection process for training neural decompilers, such as [CMUSTRUDEL/DIRE](https://github.com/CMUSTRUDEL/DIRE). The code for compilation is adapted from [bvasiles/decompilationRenaming](https://github.com/bvasiles/decompilationRenaming).
 
 
 ## Setup
@@ -23,10 +23,10 @@ From [huzecong/ghcc](https://github.com/huzecong/ghcc): This project serves as t
     ```bash
     docker build -t adv-obfuscation .
     ```
-5.  CD to root directory. Git clone [Obfuscator-LLVM](https://github.com/obfuscator-llvm/obfuscator/wiki/Installation); run only the first line of commands on the wiki page. There should now be a folder at the path "/ghcc-master/obfuscator". The latest version of Obfuscator-LLVM which is supported is llvm4.0 (latest at the time).
+5.  CD to root directory. Run the first line of commands on the wiki page at [Obfuscator-LLVM](https://github.com/obfuscator-llvm/obfuscator/wiki/Installation). There should now be a folder at the path "/ghcc-master/obfuscator". The latest version of Obfuscator-LLVM which is supported is llvm4.0 (latest at the time).
 6. CD to root directory. Build the Docker image used for the cloning and compiling repositories. The estimated time for this Docker image to build from scratch (i.e. with ``--no-cache``) is 2 hours.
    ```bash
-   docker build -t gcc-custom .
+   docker build -t gcc-custom --no-cache .
    ```
 
 ## Usage

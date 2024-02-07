@@ -56,7 +56,7 @@ class RepoInfo():
         self.repo_name = repo_name
         self.repo_size = repo_size # size of the repo in bytes
         self.clone_successful = clone_successful # whether the repo has been successfully cloned to the server
-        self.obfuscation = "" # options: none, tigress, adv-obfuscation, llvm-obfuscation-{option or all}
+        self.obfuscation = "" # options: none, adv-obfuscation, llvm-obfuscation-{option or all}
         self.compiled = compiled # whether the repo has been tested for compilation
         self.num_makefiles = num_makefiles # total number of Makefiles
         self.num_makefiles_succeeded = 0 # number of Makefiles which executed
@@ -245,19 +245,6 @@ def clone_and_compile(repo_info: RepoInfo, clone_folder: str, binary_folder: str
     flutes.log(f"{repo_full_name} being obfuscated...", "warning")
     abs_repo_path = os.path.abspath(os.path.join(clone_folder, repo_folder_name))
 
-    # apply TIGRESS (runs completely in a docker container, merged+obfuscated+compiled)
-    # repo_info.obfuscation = "tigress"
-    # subprocess.run(["docker", "run", "--rm", "-v", f"{abs_repo_path}:/`repos`", "tigress-obfuscation", "--repo-path", "/repos"])
-    # repo_info.optimization = "O1"
-    # if os.path.exists(f"{abs_repo_path}/with_debug.out"):
-    #    repo_info.num_binaries = 1
-    # tigress_binary_move(abs_repo_path, repo_info.repo_owner, repo_info.repo_name)
-    # clean(abs_repo_path)
-    # with open("meta_data.json", "a+") as f:
-    #     f.write(json.dumps(repo_info.serialize()))
-    #     f.write(",\n")
-    #     f.close()
-
     gcc_override_flags += " -O1"
     og_gcc_flags = gcc_override_flags
     compilations = ["none", "llvm-obfuscation-fla", "llvm-obfuscation-sub", "llvm-obfuscation-bcf", "llvm-obfuscation-all", "adv-obfuscation"]
@@ -421,13 +408,6 @@ def iter_repos(repo_list_path: str, max_count: Optional[int] = None) -> Iterator
         # f" ├─ New: {self.added_makefiles}, Missing: {self.missing_makefiles}\n" \
         # f" └─ Fail->Success: {self.fail_to_success}, Success->Fail: {self.success_to_fail}"
         return msg
-
-# def tigress_binary_move(repo_path, repo_owner, repo_name):
-#     """
-#     Move tigress binary to binary folder if present
-#     """
-#     subprocess.run(["mkdir", "-p", f"/dataset/binaries/{repo_owner}/{repo_name}/tigress"])
-#     subprocess.run(["mv", f"{repo_path}/with_debug.out", f"binaries/{repo_owner}/{repo_name}/tigress/with_debug.out"])
 
 def main() -> None:
     if not ghcc.utils.verify_docker_image(verbose=True):
